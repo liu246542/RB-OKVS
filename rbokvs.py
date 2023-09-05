@@ -83,6 +83,13 @@ class RBOKVS(object):
         band.frombytes(hash_bytes)
         return band
 
+    def calcu_coding(self, key):
+        start_pos = self.__hash1__(key)
+        band = self.__hash2__(key)
+        rest_pos = self.M - self.W - start_pos
+        result = bitarray("0" * start_pos) + band + bitarray("0" * rest_pos)
+        return (start_pos, result)
+
     def encode(self, kv_store):
         """
         :kv_store: dict
@@ -91,14 +98,9 @@ class RBOKVS(object):
         pos_dic = {}  # 记录每一个 key 映射的起始位置
         key_encode = {}  # 记录每一个 key 映射的向量
         for k in kv_store.keys():
-            start_pos = self.__hash1__(k)
-            rest_pos = self.M - self.W - start_pos
+            start_pos, trans_conding = self.calcu_coding(k)
             pos_dic.setdefault(k, start_pos)
-            band = self.__hash2__(k)
-            trans_conding = bitarray("0" * start_pos) + band
-            trans_conding += bitarray("0" * rest_pos)
             key_encode.setdefault(k, trans_conding)
-            assert trans_conding[0: start_pos] == bitarray("0" * start_pos)
 
         sorted_pos = dict(sorted(pos_dic.items(), key=lambda item: item[1]))
         start_list = [x for x in sorted_pos.values()]
@@ -124,9 +126,5 @@ class RBOKVS(object):
         return z
 
     def decode(self, k, z):
-        start_pos = self.__hash1__(k)
-        rest_pos = self.M - self.W - start_pos
-        band = self.__hash2__(k)
-        trans_conding = bitarray("0" * start_pos) + band
-        trans_conding += bitarray("0" * rest_pos)
+        _, trans_conding = self.calcu_coding(k)
         return bip(trans_conding, z)
