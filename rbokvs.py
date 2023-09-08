@@ -3,6 +3,7 @@
 import math
 import hashlib
 from bitarray import bitarray
+from bitarray import util as bitutil
 
 
 def hash_to_fixsize(bytesize, content):
@@ -87,7 +88,7 @@ class RBOKVS(object):
         start_pos = self.__hash1__(key)
         band = self.__hash2__(key)
         rest_pos = self.M - self.W - start_pos
-        result = bitarray("0" * start_pos) + band + bitarray("0" * rest_pos)
+        result = bitutil.zeros(start_pos) + band + bitutil.zeros(rest_pos)
         return (start_pos, result)
 
     def encode(self, kv_store):
