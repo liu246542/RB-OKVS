@@ -30,10 +30,7 @@ def bxor(b1, b2):
     if b1 == 0:
         return b2
     assert len(b1) == len(b2)
-    result = bytearray(b1)
-    for i, b in enumerate(b2):
-        result[i] ^= b
-    return bytes(result)
+    return bytes(x ^ y for x, y in zip(b1, b2))
 
 
 def bip(b1, b2):
