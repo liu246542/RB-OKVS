@@ -70,7 +70,7 @@ class RBOKVS(object):
         hash a key to a specific position
         h_1(key) -> [0, M - W]
         """
-        hash_range = self.M - self.W
+        hash_range = self.M - self.W + 1
         pos_bin = hash_to_fixsize(64, key)
         pos_convert = int.from_bytes(pos_bin, byteorder="big") % hash_range
         return pos_convert
