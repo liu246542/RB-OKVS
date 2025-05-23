@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 
-import math
 import hashlib
+import math
+
 from bitarray import bitarray
 from bitarray import util as bitutil
 
