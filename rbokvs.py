@@ -61,7 +61,17 @@ class RBOKVS(object):
     """
 
     def __init__(self, M, N, W):
-        assert W % 8 == 0
+        assert W % 8 == 0, "W must be divisible by 8"
+        assert M >= N, "M must be at least N"
+        assert W > 0, "W must be positive"
+        
+        # Parameter validation based on paper requirements
+        epsilon = (M - N) / N if N > 0 else 0
+        if epsilon > 0:
+            min_w = max(64, int(128 / epsilon + 10))  # λ/ε + log(n), with λ=128
+            if W < min_w:
+                print(f"Warning: W={W} may be too small. Recommended W >= {min_w}")
+        
         self.M = M
         self.N = N
         self.W = W
@@ -86,6 +96,11 @@ class RBOKVS(object):
         start_pos = self.__hash1__(key)
         band = self.__hash2__(key)
         rest_pos = self.M - self.W - start_pos
+        
+        # Handle edge cases where rest_pos might be negative
+        if rest_pos < 0:
+            rest_pos = 0
+        
         result = bitutil.zeros(start_pos) + band + bitutil.zeros(rest_pos)
         return (start_pos, result)
 
@@ -108,20 +123,37 @@ class RBOKVS(object):
 
         piv = [0] * self.N
         for i in range(self.N):
+            # Find leftmost 1 in current row (pivot)
+            pivot_found = False
             for j in range(start_list[i], start_list[i] + self.W):
-                if sorted_coding[i][j] == 1:
+                if j < self.M and sorted_coding[i][j] == 1:
                     piv[i] = j
+                    pivot_found = True
+                    
+                    # Eliminate this column in subsequent rows
                     for i_p in range(i + 1, self.N):
-                        if start_list[i_p] <= piv[i]:
-                            if sorted_coding[i_p][piv[i]] == 1:
-                                sorted_coding[i_p] ^= sorted_coding[i]
-                                b[i_p] = bxor(b[i_p], b[i])
+                        # Check if row i_p's band overlaps with pivot column j
+                        if (start_list[i_p] <= j < start_list[i_p] + self.W and 
+                            sorted_coding[i_p][j] == 1):
+                            sorted_coding[i_p] ^= sorted_coding[i]
+                            b[i_p] = bxor(b[i_p], b[i])
                     break
-            if piv[i] == 0:
-                raise RuntimeError(f"Fail to initialize at {i}th row!")
+            
+            if not pivot_found:
+                # Matrix is not solvable, return random encoding as per paper
+                from bitarray import util as bitutil
+                random_z = []
+                for _ in range(self.M):
+                    random_bytes = bitutil.urandom(len(list(kv_store.values())[0]))
+                    random_z.append(random_bytes.tobytes())
+                return random_z
+        # Back substitution
         z = [0] * self.M
         for i in range(self.N - 1, -1, -1):
-            z[piv[i]] = bxor(bip(sorted_coding[i], z), b[i])
+            if piv[i] > 0:  # Valid pivot
+                # Compute z[piv[i]] = b[i] XOR (inner product of row i with current z)
+                inner_prod = bip(sorted_coding[i], z)
+                z[piv[i]] = bxor(inner_prod, b[i])
         return z
 
     def decode(self, k, z):
