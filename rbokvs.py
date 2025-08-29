@@ -64,14 +64,14 @@ class RBOKVS(object):
         assert W % 8 == 0, "W must be divisible by 8"
         assert M >= N, "M must be at least N"
         assert W > 0, "W must be positive"
-        
+
         # Parameter validation based on paper requirements
         epsilon = (M - N) / N if N > 0 else 0
         if epsilon > 0:
             min_w = max(64, int(128 / epsilon + 10))  # λ/ε + log(n), with λ=128
             if W < min_w:
                 print(f"Warning: W={W} may be too small. Recommended W >= {min_w}")
-        
+
         self.M = M
         self.N = N
         self.W = W
@@ -96,11 +96,11 @@ class RBOKVS(object):
         start_pos = self.__hash1__(key)
         band = self.__hash2__(key)
         rest_pos = self.M - self.W - start_pos
-        
+
         # Handle edge cases where rest_pos might be negative
         if rest_pos < 0:
             rest_pos = 0
-        
+
         result = bitutil.zeros(start_pos) + band + bitutil.zeros(rest_pos)
         return (start_pos, result)
 
@@ -129,16 +129,16 @@ class RBOKVS(object):
                 if j < self.M and sorted_coding[i][j] == 1:
                     piv[i] = j
                     pivot_found = True
-                    
+
                     # Eliminate this column in subsequent rows
                     for i_p in range(i + 1, self.N):
                         # Check if row i_p's band overlaps with pivot column j
-                        if (start_list[i_p] <= j < start_list[i_p] + self.W and 
+                        if (start_list[i_p] <= j < start_list[i_p] + self.W and
                             sorted_coding[i_p][j] == 1):
                             sorted_coding[i_p] ^= sorted_coding[i]
                             b[i_p] = bxor(b[i_p], b[i])
                     break
-            
+
             if not pivot_found:
                 # Matrix is not solvable, return random encoding as per paper
                 from bitarray import util as bitutil
